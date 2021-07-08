@@ -85,6 +85,12 @@ public struct W2STTelemetry {
         public var enabled: Bool = false
     }
     public var arming: W2STArming = W2STArming()
+
+    public init() {
+        self.environment = W2STEnvironment()
+        self.AHRS = W2STAHRS()
+        self.arming = W2STArming()
+    }
 }
 
 private func fmtUUID(_ uuid: CBUUID) -> String {

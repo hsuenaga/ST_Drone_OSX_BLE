@@ -47,44 +47,44 @@ private enum W2STID: String {
 
 public struct W2STTelemetry {
     public struct W2STEnvironment {
-        var tick: UInt16 = 0
-        var pressure: UInt32 = 0
-        var battery: UInt16 = 0
-        var temprature: UInt16 = 0
-        var RSSI: UInt16 = 0
+        public var tick: UInt16 = 0
+        public var pressure: UInt32 = 0
+        public var battery: UInt16 = 0
+        public var temprature: UInt16 = 0
+        public var RSSI: UInt16 = 0
     }
-    var environment: W2STEnvironment = W2STEnvironment()
+    public var environment: W2STEnvironment = W2STEnvironment()
 
     public struct W2STAHRS {
-        var tick: UInt16 = 0
+        public var tick: UInt16 = 0
         public struct W2STAcceleration {
-            var x: UInt16 = 0
-            var y: UInt16 = 0
-            var z: UInt16 = 0
+            public var x: UInt16 = 0
+            public var y: UInt16 = 0
+            public var z: UInt16 = 0
         }
-        var acceleration: W2STAcceleration = W2STAcceleration()
+        public var acceleration: W2STAcceleration = W2STAcceleration()
 
         public struct W2STGyrometer {
-            var x: UInt16 = 0
-            var y: UInt16 = 0
-            var z: UInt16 = 0
+            public var x: UInt16 = 0
+            public var y: UInt16 = 0
+            public var z: UInt16 = 0
         }
-        var gyrometer: W2STGyrometer = W2STGyrometer()
+        public var gyrometer: W2STGyrometer = W2STGyrometer()
 
         public struct W2STAxis {
-            var x: UInt16 = 0
-            var y: UInt16 = 0
-            var z: UInt16 = 0
+            public var x: UInt16 = 0
+            public var y: UInt16 = 0
+            public var z: UInt16 = 0
         }
-        var axis: W2STAxis = W2STAxis()
+        public var axis: W2STAxis = W2STAxis()
     }
-    var AHRS: W2STAHRS = W2STAHRS()
+    public var AHRS: W2STAHRS = W2STAHRS()
 
     public struct W2STArming {
-        var tick: UInt16 = 0
-        var enabled: Bool = false
+        public var tick: UInt16 = 0
+        public var enabled: Bool = false
     }
-    var arming: W2STArming = W2STArming()
+    public var arming: W2STArming = W2STArming()
 }
 
 private func fmtUUID(_ uuid: CBUUID) -> String {

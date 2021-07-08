@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "iDrone",
+    name: "STDroneOSX",
     platforms: [
         .macOS(.v11)
     ],

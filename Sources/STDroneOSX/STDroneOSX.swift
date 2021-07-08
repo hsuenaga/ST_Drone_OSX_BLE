@@ -1,6 +1,36 @@
 import CoreBluetooth
 
 extension Data {
+    func readInt16LE(from: Int) -> Int16 {
+        var value: Int16
+        var signed = false
+        var uvalue: UInt16 = self.readUint16LE(from: from)
+
+        signed = ((uvalue & 0x8000) != 0)
+        uvalue &= 0x7fff
+        value = Int16(uvalue)
+        if signed {
+            value = -value
+        }
+
+        return value
+    }
+
+    func readInt32LE(from: Int) -> Int32 {
+        var value: Int32
+        var signed = false
+        var uvalue: UInt32 = self.readUint32LE(from: from)
+
+        signed = ((uvalue & 0x8000_0000) != 0)
+        uvalue &= 0x7fff_ffff
+        value = Int32(uvalue)
+        if signed {
+            value = -value
+        }
+
+        return value
+    }
+
     func readUint16LE(from: Int) -> UInt16 {
         var value: UInt16
 
@@ -51,30 +81,30 @@ public struct W2STTelemetry {
         public var pressure: UInt32 = 0
         public var battery: UInt16 = 0
         public var temprature: UInt16 = 0
-        public var RSSI: UInt16 = 0
+        public var RSSI: Int16 = 0
     }
     public var environment: W2STEnvironment = W2STEnvironment()
 
     public struct W2STAHRS {
         public var tick: UInt16 = 0
         public struct W2STAcceleration {
-            public var x: UInt16 = 0
-            public var y: UInt16 = 0
-            public var z: UInt16 = 0
+            public var x: Int16 = 0
+            public var y: Int16 = 0
+            public var z: Int16 = 0
         }
         public var acceleration: W2STAcceleration = W2STAcceleration()
 
         public struct W2STGyrometer {
-            public var x: UInt16 = 0
-            public var y: UInt16 = 0
-            public var z: UInt16 = 0
+            public var x: Int16 = 0
+            public var y: Int16 = 0
+            public var z: Int16 = 0
         }
         public var gyrometer: W2STGyrometer = W2STGyrometer()
 
         public struct W2STAxis {
-            public var x: UInt16 = 0
-            public var y: UInt16 = 0
-            public var z: UInt16 = 0
+            public var x: Int16 = 0
+            public var y: Int16 = 0
+            public var z: Int16 = 0
         }
         public var axis: W2STAxis = W2STAxis()
     }
@@ -172,7 +202,7 @@ private func fmtValueEnvTTBP(_ value: Data) -> String {
     result += ", Press \(value.readUint32LE(from: 2))"
     result += ", Batt \(value.readUint16LE(from: 6))"
     result += ", Temp \(value.readUint16LE(from: 8))"
-    result += ", RSSI \(value.readUint16LE(from: 10))"
+    result += ", RSSI \(value.readInt16LE(from: 10))"
 
     return result
 }
@@ -181,15 +211,15 @@ private func fmtValueAccGyroMag(_ value: Data) -> String {
     var result = ""
 
     result += "Tick \(value.readUint16LE(from: 0))"
-    result += ", Acc.X \(value.readUint16LE(from: 2))"
-    result += ", Acc.Y \(value.readUint16LE(from: 4))"
-    result += ", Acc.Z \(value.readUint16LE(from: 6))"
-    result += ", Gyro.X \(value.readUint16LE(from: 8))"
-    result += ", Gyro.Y \(value.readUint16LE(from: 10))"
-    result += ", Gyro.Z \(value.readUint16LE(from: 12))"
-    result += ", Axis.X \(value.readUint16LE(from: 14))"
-    result += ", Axis.Y \(value.readUint16LE(from: 16))"
-    result += ", Axis.Z \(value.readUint16LE(from: 18))"
+    result += ", Acc.X \(value.readInt16LE(from: 2))"
+    result += ", Acc.Y \(value.readInt16LE(from: 4))"
+    result += ", Acc.Z \(value.readInt16LE(from: 6))"
+    result += ", Gyro.X \(value.readInt16LE(from: 8))"
+    result += ", Gyro.Y \(value.readInt16LE(from: 10))"
+    result += ", Gyro.Z \(value.readInt16LE(from: 12))"
+    result += ", Axis.X \(value.readInt16LE(from: 14))"
+    result += ", Axis.Y \(value.readInt16LE(from: 16))"
+    result += ", Axis.Z \(value.readInt16LE(from: 18))"
     return result
 }
 
@@ -392,27 +422,27 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             telemetry.environment.temprature =
                 value.readUint16LE(from: 8)
             telemetry.environment.RSSI =
-                value.readUint16LE(from: 10)
+                value.readInt16LE(from: 10)
         case .AccGyroMag:
             telemetry.AHRS.tick = value.readUint16LE(from: 0)
             telemetry.AHRS.acceleration.x =
-                value.readUint16LE(from: 2)
+                value.readInt16LE(from: 2)
             telemetry.AHRS.acceleration.y =
-                value.readUint16LE(from: 4)
+                value.readInt16LE(from: 4)
             telemetry.AHRS.acceleration.z =
-                value.readUint16LE(from: 6)
+                value.readInt16LE(from: 6)
             telemetry.AHRS.gyrometer.x =
-                value.readUint16LE(from: 8)
+                value.readInt16LE(from: 8)
             telemetry.AHRS.gyrometer.y =
-                value.readUint16LE(from: 10)
+                value.readInt16LE(from: 10)
             telemetry.AHRS.gyrometer.z =
-                value.readUint16LE(from: 12)
+                value.readInt16LE(from: 12)
             telemetry.AHRS.axis.x =
-                value.readUint16LE(from: 14)
+                value.readInt16LE(from: 14)
             telemetry.AHRS.axis.y =
-                value.readUint16LE(from: 16)
+                value.readInt16LE(from: 16)
             telemetry.AHRS.axis.z =
-                value.readUint16LE(from: 18)
+                value.readInt16LE(from: 18)
         case .Arming:
             telemetry.arming.tick = value.readUint16LE(from: 0)
             telemetry.arming.enabled = (value[2] != 0)

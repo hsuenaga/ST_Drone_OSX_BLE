@@ -45,6 +45,48 @@ private enum W2STID: String {
     case Config         = "00000002-000F-11E1-AC36-0002A5D5C51B"
 }
 
+public struct W2STTelemetry {
+    public struct W2STEnvironment {
+        var tick: UInt16 = 0
+        var pressure: UInt32 = 0
+        var battery: UInt16 = 0
+        var temprature: UInt16 = 0
+        var RSSI: UInt16 = 0
+    }
+    var environment: W2STEnvironment = W2STEnvironment()
+
+    public struct W2STAHRS {
+        var tick: UInt16 = 0
+        public struct W2STAcceleration {
+            var x: UInt16 = 0
+            var y: UInt16 = 0
+            var z: UInt16 = 0
+        }
+        var acceleration: W2STAcceleration = W2STAcceleration()
+
+        public struct W2STGyrometer {
+            var x: UInt16 = 0
+            var y: UInt16 = 0
+            var z: UInt16 = 0
+        }
+        var gyrometer: W2STGyrometer = W2STGyrometer()
+
+        public struct W2STAxis {
+            var x: UInt16 = 0
+            var y: UInt16 = 0
+            var z: UInt16 = 0
+        }
+        var axis: W2STAxis = W2STAxis()
+    }
+    var AHRS: W2STAHRS = W2STAHRS()
+
+    public struct W2STArming {
+        var tick: UInt16 = 0
+        var enabled: Bool = false
+    }
+    var arming: W2STArming = W2STArming()
+}
+
 private func fmtUUID(_ uuid: CBUUID) -> String {
     let uuidDict:Dictionary<String,String> = [
         CBUUIDCharacteristicExtendedPropertiesString : "ExtendedProperty",
@@ -195,16 +237,22 @@ private func fmtDescriptor(_ descriptor: CBDescriptor) -> String {
 open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     public var name: String = "(uninitialized)"
     public var identifier: UUID = UUID()
-    public var central: CBCentralManager!
+    public var central: STDroneCentralManager!
     public var peripheral: CBPeripheral!
     public var services: [CBService]
+    public var telemetry: W2STTelemetry
+    public var inDiscovery: Bool = false
+    public var inProgress: Int = 0
+    public var discoverCallback: (() -> Void)?
+    public var notifyCallback: ((W2STTelemetry) -> Void)?
 
     override init () {
         self.services = []
+        self.telemetry = W2STTelemetry()
         super.init()
     }
 
-    convenience init(peripheral: CBPeripheral, withCentral: CBCentralManager) {
+    convenience init(peripheral: CBPeripheral, withCentral: STDroneCentralManager) {
         self.init()
         self.central = withCentral
         self.peripheral = peripheral
@@ -213,79 +261,202 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         self.identifier = peripheral.identifier
     }
 
-    // CBPeripheralDelegate
+    //
+    // Interface: CBPeripheralDelegate
+    //
+
+    // Service
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let e = error {
             print(e)
+            decProgress()
             return
         }
-        print("didDiscoverServices called.")
         for service in peripheral.services! {
-            print("found service: \(service.uuid.uuidString)")
             self.services.append(service)
+            addProgress()
             peripheral.discoverCharacteristics(nil, for: service)
         }
+        decProgress()
     }
 
+    // Characteristics
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         if let e = error {
+            decProgress()
             print(e)
             return
         }
         for characteristic in service.characteristics! {
+            // Discover Descriptors
+            addProgress()
             peripheral.discoverDescriptors(for: characteristic)
-            if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
-                print("Enable Notification: \(fmtUUID(characteristic.uuid))")
-                peripheral.setNotifyValue(true, for: characteristic)
-            }
-            else if characteristic.properties.contains(.read) {
+
+            // Handle Values
+            if characteristic.properties.contains(.read) {
+                addProgress()
                 peripheral.readValue(for: characteristic)
             }
         }
+        decProgress()
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         if let e = error {
+            decProgress()
             print(e)
             return
         }
-        showService()
-    }
-
-    public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
-        if let e = error {
-            print(e)
-            return
+        parseCharValue(characteristic)
+        decProgress()
+        if inDiscovery == false, notifyCallback != nil {
+            notifyCallback!(telemetry)
         }
     }
 
+    // Descritors
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: Error?) {
         if let e = error {
+            decProgress()
             print(e)
             return
         }
         guard let descriptors = characteristic.descriptors else {
+            decProgress()
             return
         }
         for descriptor in descriptors {
+            addProgress()
             peripheral.readValue(for: descriptor)
         }
+        decProgress()
     }
 
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
+        if let e = error {
+            decProgress()
+            print(e)
+            return
+        }
+        decProgress()
+    }
+
+    // Notification
     public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         if let e = error {
             print(e)
             return
         }
-        print("Notification State changed: \(fmtUUID(characteristic.uuid))")
+    }
+
+    //
+    // private utilities
+    //
+    private func addProgress() {
+        if inDiscovery {
+            inProgress += 1
+        }
+    }
+
+    private func decProgress() {
+        if inDiscovery {
+            inProgress -= 1
+            if inProgress == 0, discoverCallback != nil {
+                discoverCallback!()
+                inDiscovery = false
+                discoverCallback = nil
+            }
+        }
+    }
+
+    private func parseCharValue(_ characteristic: CBCharacteristic) {
+        guard let value = characteristic.value else {
+            return
+        }
+        let id = W2STID(rawValue: characteristic.uuid.uuidString)
+
+        switch id {
+        case .EnvTTBP:
+            telemetry.environment.tick =
+                value.readUint16LE(from: 0)
+            telemetry.environment.pressure =
+                value.readUint32LE(from: 2)
+            telemetry.environment.battery =
+                value.readUint16LE(from: 6)
+            telemetry.environment.temprature =
+                value.readUint16LE(from: 8)
+            telemetry.environment.RSSI =
+                value.readUint16LE(from: 10)
+        case .AccGyroMag:
+            telemetry.AHRS.tick = value.readUint16LE(from: 0)
+            telemetry.AHRS.acceleration.x =
+                value.readUint16LE(from: 2)
+            telemetry.AHRS.acceleration.y =
+                value.readUint16LE(from: 4)
+            telemetry.AHRS.acceleration.z =
+                value.readUint16LE(from: 6)
+            telemetry.AHRS.gyrometer.x =
+                value.readUint16LE(from: 8)
+            telemetry.AHRS.gyrometer.y =
+                value.readUint16LE(from: 10)
+            telemetry.AHRS.gyrometer.z =
+                value.readUint16LE(from: 12)
+            telemetry.AHRS.axis.x =
+                value.readUint16LE(from: 14)
+            telemetry.AHRS.axis.y =
+                value.readUint16LE(from: 16)
+            telemetry.AHRS.axis.z =
+                value.readUint16LE(from: 18)
+        case .Arming:
+            telemetry.arming.tick = value.readUint16LE(from: 0)
+            telemetry.arming.enabled = (value[2] != 0)
+        default:
+            break
+        }
+    }
+
+    private func setNotifyAll(_ enable: Bool) {
+        for service in services {
+            guard let characteristics = service.characteristics else {
+                continue
+            }
+
+            for characteristic in characteristics {
+                if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
+                    peripheral.setNotifyValue(enable, for: characteristic)
+                }
+            }
+        }
     }
 
     // open
-    open func dump() {
+    open func connect(_ callback: ((Error?) -> Void)? = nil) {
+        self.central.stop()
+        self.central.connect(peripheral) { error in
+            if callback != nil {
+                callback!(error)
+            }
+        }
+    }
+
+    open func disconnect() {
+        setNotifyAll(false)
+        self.central.disconnect(peripheral)
+    }
+
+    open func discoverAll(_ callback: (() -> Void)? = nil) {
+        self.discoverCallback = callback
+        inDiscovery = true
+        addProgress()
         peripheral.discoverServices(nil)
     }
 
-    open func showService() {
+    open func onUpdate(_ callback: @escaping ((W2STTelemetry) -> Void)) {
+        notifyCallback = callback
+        setNotifyAll(true)
+    }
+
+    open func showServices() {
         for service in services {
             print("service: \(fmtUUID(service.uuid))")
             guard let characteristics = service.characteristics else {
@@ -293,7 +464,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             }
             for characteristic in characteristics {
                 print("  -> characteristic: \(fmtUUID(characteristic.uuid))")
-                print("     -> value: \(fmtValue(characteristic))")
+                if characteristic.properties.contains(.read) {
+                    print("     -> value: \(fmtValue(characteristic))")
+                }
                 print("     -> property: \(fmtProps(characteristic.properties))")
 
                 if let descriptors = characteristic.descriptors {
@@ -306,10 +479,6 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         }
     }
 
-    open func connect() {
-        self.central.stopScan()
-        self.central.connect(peripheral, options: nil)
-    }
 }
 
 open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
@@ -318,6 +487,8 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
     var enable: Bool
     let targetLocalNames: [String] = ["DRN1110", "DRN1120"]
     var onFound: (([STDronePeripheral]) -> Void)?
+    var onConnect: ((Error?) -> Void)?
+    var onDisconnect: (() -> Void)?
 
     override public init () {
         enable = false
@@ -325,7 +496,11 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         manager = CBCentralManager(delegate: self, queue: nil)
     }
 
+    //
     // CBCentralManagerDelegate
+    //
+
+    // state
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch (central.state) {
             case .poweredOff:
@@ -348,6 +523,7 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         }
     }
 
+    // peripheral
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         guard let name = peripheral.name else {
             // Ignore anoymous peripherals
@@ -355,32 +531,41 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         }
         if targetLocalNames.contains(name) {
             if peripherals[peripheral.identifier] == nil {
-                peripherals[peripheral.identifier] = STDronePeripheral(peripheral: peripheral, withCentral: manager)
+                peripherals[peripheral.identifier] = STDronePeripheral(peripheral: peripheral, withCentral: self)
                 onFound?(peripherals.map {$1})
             }
         }
     }
 
+    // connection
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("connected.")
+        if onConnect != nil {
+            onConnect!(nil)
+        }
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        print("connection error.")
+        if onConnect != nil {
+            onConnect!(error)
+        }
     }
 
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        print("disconnected.")
+        if onDisconnect != nil {
+            onDisconnect!()
+        }
     }
 
-    // open
+    //
+    // public
+    //
     open func triggerScan() {
         if manager.isScanning == false {
             manager.scanForPeripherals(withServices: nil, options: nil)
         }
     }
 
-    open func start(_ callback: @escaping ([STDronePeripheral]) -> Void) {
+    open func start(_ callback: (([STDronePeripheral]) -> Void)? = nil) {
         self.enable = true
         self.onFound = callback
         if manager.state == .poweredOn {
@@ -393,5 +578,15 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         if manager.isScanning {
             manager.stopScan()
         }
+    }
+
+    open func connect(_ peripheral: CBPeripheral, _ callback: ((Error?) -> Void)? = nil) {
+        onConnect = callback
+        manager.connect(peripheral, options: nil)
+    }
+
+    open func disconnect(_ peripheral: CBPeripheral, _ callback: (() -> Void)? = nil) {
+        onDisconnect = callback
+        manager.cancelPeripheralConnection(peripheral)
     }
 }

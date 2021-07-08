@@ -9,12 +9,39 @@ import Foundation
 import CoreBluetooth
 import STDroneOSX
 
+var readTelemetry = false
+if (CommandLine.arguments.contains("-f")) {
+    readTelemetry = true
+}
+
+
 let central = STDroneCentralManager()
 central.start { devices in
     for device in devices {
         print("DevList: \(device.name) (\(device.identifier))")
     }
-    devices[0].connect()
+
+    let dev = devices[0]
+
+    dev.connect { error in
+        if error != nil {
+            print("connection error: \(error!)")
+            return
+        }
+        print("conected.")
+
+        dev.discoverAll {
+            dev.showServices()
+            if readTelemetry {
+                dev.onUpdate {telemetry in
+                    print(telemetry)
+                }
+            }
+            else {
+                exit(0)
+            }
+        }
+    }
 }
 
 RunLoop.main.run()

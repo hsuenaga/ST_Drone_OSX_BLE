@@ -116,6 +116,9 @@ public struct W2STTelemetry {
     }
     public var arming: W2STArming = W2STArming()
 
+    public var stdout: String = ""
+    public var stderr: String = ""
+
     public init() {
         self.environment = W2STEnvironment()
         self.AHRS = W2STAHRS()
@@ -279,6 +282,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     public var telemetry: W2STTelemetry
     public var inDiscovery: Bool = false
     public var inProgress: Int = 0
+    public var joydata: CBCharacteristic?
+    public var config: CBCharacteristic?
+    public var stdin: CBCharacteristic?
     public var discoverCallback: (() -> Void)?
     public var notifyCallback: ((W2STTelemetry) -> Void)?
 
@@ -332,6 +338,19 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             if characteristic.properties.contains(.read) {
                 addProgress()
                 peripheral.readValue(for: characteristic)
+            }
+
+            // Keep some characteristic for writing.
+            let id = W2STID(rawValue: characteristic.uuid.uuidString)
+            switch (id) {
+            case .STDInOut:
+                stdin = characteristic
+            case .Config:
+                config = characteristic
+            case .Max:
+                joydata = characteristic
+            default:
+                break
             }
         }
         decProgress()
@@ -446,6 +465,10 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         case .Arming:
             telemetry.arming.tick = value.readUint16LE(from: 0)
             telemetry.arming.enabled = (value[2] != 0)
+        case .STDInOut:
+            telemetry.stdout = String(data: value, encoding: .ascii) ?? ""
+        case .STDErr:
+            telemetry.stderr = String(data: value, encoding: .ascii) ?? ""
         default:
             break
         }
@@ -490,6 +513,29 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     open func onUpdate(_ callback: @escaping ((W2STTelemetry) -> Void)) {
         notifyCallback = callback
         setNotifyAll(true)
+    }
+
+    open func writeJoydata(data: Data) {
+        if data.count != 8 {
+            return
+        }
+        guard let characteristic = joydata else {
+            return
+        }
+        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+    }
+
+    open func writeStdin(text: String) {
+        if text.count == 0 {
+            return
+        }
+        guard let characteristic = stdin else {
+            return
+        }
+        let data = text.data(using: .ascii)
+        if data != nil {
+            peripheral.writeValue(data!, for: characteristic, type: .withoutResponse)
+        }
     }
 
     open func showServices() {

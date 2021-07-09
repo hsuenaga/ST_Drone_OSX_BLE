@@ -518,9 +518,11 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 
     open func writeJoydata(data: Data) {
         if data.count != 8 {
+            print("writeJoydata: invalid data size \(data.count).")
             return
         }
         guard let characteristic = joydata else {
+            print("no characteristic found.")
             return
         }
         peripheral.writeValue(data, for: characteristic, type: .withResponse)
@@ -528,9 +530,11 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 
     open func writeStdin(text: String) {
         if text.count == 0 {
+            print("writeStdin: invalid data size \(text.count).")
             return
         }
         guard let characteristic = stdin else {
+            print("no characteristic found.")
             return
         }
         let data = text.data(using: .ascii)

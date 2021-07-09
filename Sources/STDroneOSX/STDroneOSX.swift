@@ -522,7 +522,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         guard let characteristic = joydata else {
             return
         }
-        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
     }
 
     open func writeStdin(text: String) {
@@ -534,7 +534,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         }
         let data = text.data(using: .ascii)
         if data != nil {
-            peripheral.writeValue(data!, for: characteristic, type: .withoutResponse)
+            peripheral.writeValue(data!, for: characteristic, type: .withResponse)
         }
     }
 

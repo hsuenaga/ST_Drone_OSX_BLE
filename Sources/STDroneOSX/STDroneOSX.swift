@@ -500,6 +500,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 
     open func disconnect() {
         setNotifyAll(false)
+        notifyCallback = nil
         self.central.disconnect(peripheral)
     }
 

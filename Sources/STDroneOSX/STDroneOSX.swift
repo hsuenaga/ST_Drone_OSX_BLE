@@ -369,6 +369,14 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         }
     }
 
+    public func peripheral(_ peripheral: CBPeripheral,
+                           didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        if let e = error {
+            print("Write Error: \(e)")
+            return
+        }
+    }
+
     // Descritors
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: Error?) {
         if let e = error {

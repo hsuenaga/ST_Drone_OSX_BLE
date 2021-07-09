@@ -525,7 +525,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     }
 
     open func writeJoydata(data: Data) {
-        if data.count != 9 {
+        if data.count == 0 {
             print("writeJoydata: invalid data size \(data.count).")
             return
         }

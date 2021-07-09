@@ -7,10 +7,12 @@ extension Data {
         var uvalue: UInt16 = self.readUint16LE(from: from)
 
         signed = ((uvalue & 0x8000) != 0)
-        uvalue &= 0x7fff
-        value = Int16(uvalue)
         if signed {
-            value = -value
+            uvalue = ~uvalue + 1
+            value = -Int16(uvalue)
+        }
+        else {
+            value = Int16(uvalue)
         }
 
         return value
@@ -22,10 +24,12 @@ extension Data {
         var uvalue: UInt32 = self.readUint32LE(from: from)
 
         signed = ((uvalue & 0x8000_0000) != 0)
-        uvalue &= 0x7fff_ffff
-        value = Int32(uvalue)
         if signed {
-            value = -value
+            uvalue = ~uvalue + 1
+            value = -Int32(uvalue)
+        }
+        else {
+            value = Int32(uvalue)
         }
 
         return value

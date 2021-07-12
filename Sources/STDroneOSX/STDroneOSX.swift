@@ -478,9 +478,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             telemetry.arming.tick = value.readUint16LE(from: 0)
             telemetry.arming.enabled = (value[2] != 0)
         case .STDInOut:
-            telemetry.stdout = String(data: value, encoding: .ascii) ?? ""
+            telemetry.stdout += String(data: value, encoding: .ascii) ?? ""
         case .STDErr:
-            telemetry.stderr = String(data: value, encoding: .ascii) ?? ""
+            telemetry.stderr += String(data: value, encoding: .ascii) ?? ""
         default:
             break
         }

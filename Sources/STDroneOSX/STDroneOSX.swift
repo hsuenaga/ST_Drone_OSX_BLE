@@ -82,9 +82,9 @@ private enum W2STID: String {
 public struct W2STTelemetry {
     public struct W2STEnvironment {
         public var tick: UInt16 = 0
-        public var pressure: UInt32 = 0
+        public var pressure: Int32 = 0
         public var battery: UInt16 = 0
-        public var temprature: UInt16 = 0
+        public var temprature: Int16 = 0
         public var RSSI: Int16 = 0
     }
     public var environment: W2STEnvironment = W2STEnvironment()
@@ -447,11 +447,11 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             telemetry.environment.tick =
                 value.readUint16LE(from: 0)
             telemetry.environment.pressure =
-                value.readUint32LE(from: 2)
+                value.readInt32LE(from: 2)
             telemetry.environment.battery =
                 value.readUint16LE(from: 6)
             telemetry.environment.temprature =
-                value.readUint16LE(from: 8)
+                value.readInt16LE(from: 8)
             telemetry.environment.RSSI =
                 value.readInt16LE(from: 10)
         case .AccGyroMag:

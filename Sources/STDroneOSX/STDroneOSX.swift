@@ -105,12 +105,12 @@ public struct W2STTelemetry {
         }
         public var gyrometer: W2STGyrometer = W2STGyrometer()
 
-        public struct W2STAxis {
+        public struct W2STMag {
             public var x: Int16 = 0
             public var y: Int16 = 0
             public var z: Int16 = 0
         }
-        public var axis: W2STAxis = W2STAxis()
+        public var mag: W2STMag = W2STMag()
     }
     public var AHRS: W2STAHRS = W2STAHRS()
 
@@ -224,9 +224,9 @@ private func fmtValueAccGyroMag(_ value: Data) -> String {
     result += ", Gyro.X \(value.readInt16LE(from: 8))"
     result += ", Gyro.Y \(value.readInt16LE(from: 10))"
     result += ", Gyro.Z \(value.readInt16LE(from: 12))"
-    result += ", Axis.X \(value.readInt16LE(from: 14))"
-    result += ", Axis.Y \(value.readInt16LE(from: 16))"
-    result += ", Axis.Z \(value.readInt16LE(from: 18))"
+    result += ", Mag.X \(value.readInt16LE(from: 14))"
+    result += ", Mag.Y \(value.readInt16LE(from: 16))"
+    result += ", Mag.Z \(value.readInt16LE(from: 18))"
     return result
 }
 
@@ -468,11 +468,11 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
                 value.readInt16LE(from: 10)
             telemetry.AHRS.gyrometer.z =
                 value.readInt16LE(from: 12)
-            telemetry.AHRS.axis.x =
+            telemetry.AHRS.mag.x =
                 value.readInt16LE(from: 14)
-            telemetry.AHRS.axis.y =
+            telemetry.AHRS.mag.y =
                 value.readInt16LE(from: 16)
-            telemetry.AHRS.axis.z =
+            telemetry.AHRS.mag.z =
                 value.readInt16LE(from: 18)
         case .Arming:
             telemetry.arming.tick = value.readUint16LE(from: 0)

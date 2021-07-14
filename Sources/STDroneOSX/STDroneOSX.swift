@@ -294,6 +294,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     public var joyDataToSend: Data = Data(count: 7)
     public var joyTimer: Timer?
     public var joyInterval: Double = 0.1
+    public var joyVerbose: Bool = false
 
     override init () {
         self.services = []
@@ -512,13 +513,17 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
                 callback!(error)
             }
             guard error == nil else {
-                return
-            }
-            guard let characteristic = self.joydata else {
+                print("connection error")
                 return
             }
             self.joyTimer = Timer.scheduledTimer(withTimeInterval: self.joyInterval, repeats: true, block: { timer in
+                guard let characteristic = self.joydata else {
+                    return
+                }
                 self.peripheral.writeValue(self.joyDataToSend, for: characteristic, type: .withoutResponse)
+                if self.joyVerbose {
+                    print("Sent joyData: \(self.joyDataToSend)")
+                }
             })
         }
     }

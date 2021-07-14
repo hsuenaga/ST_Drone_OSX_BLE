@@ -23,6 +23,7 @@ central.start { devices in
 
     let dev = devices[0]
 
+    dev.joyVerbose = true
     dev.connect { error in
         if error != nil {
             print("connection error: \(error!)")

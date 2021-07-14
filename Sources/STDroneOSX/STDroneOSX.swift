@@ -532,15 +532,18 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         }
     }
 
+    open func disconnectComplete() {
+        if disconnectCallback != nil {
+            disconnectCallback!()
+        }
+    }
+
     open func disconnect() {
         setNotifyAll(false)
         notifyCallback = nil
         self.joyTimer?.invalidate()
         if self.peripheral.state == .connected {
             self.central.disconnect(peripheral)
-        }
-        if disconnectCallback != nil {
-            disconnectCallback!()
         }
     }
 
@@ -684,7 +687,7 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         guard let target = peripherals[peripheral.identifier] else {
             return
         }
-        target.disconnect()
+        target.disconnectComplete()
     }
 
     //

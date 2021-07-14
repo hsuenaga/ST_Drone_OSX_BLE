@@ -291,6 +291,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     public var stdin: CBCharacteristic?
     public var discoverCallback: (() -> Void)?
     public var notifyCallback: ((W2STTelemetry) -> Void)?
+    public var joyDataToSend: Data = Data(count: 7)
+    public var joyTimer: Timer?
+    public var joyInterval: Double = 0.1
 
     override init () {
         self.services = []
@@ -503,16 +506,27 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     // open
     open func connect(_ callback: ((Error?) -> Void)? = nil) {
         self.central.stop()
+        self.joyDataToSend = Data(count: 7)
         self.central.connect(peripheral) { error in
             if callback != nil {
                 callback!(error)
             }
+            guard error == nil else {
+                return
+            }
+            guard let characteristic = self.joydata else {
+                return
+            }
+            self.joyTimer = Timer.scheduledTimer(withTimeInterval: self.joyInterval, repeats: true, block: { timer in
+                self.peripheral.writeValue(self.joyDataToSend, for: characteristic, type: .withoutResponse)
+            })
         }
     }
 
     open func disconnect() {
         setNotifyAll(false)
         notifyCallback = nil
+        self.joyTimer?.invalidate()
         self.central.disconnect(peripheral)
     }
 
@@ -533,11 +547,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             print("writeJoydata: invalid data size \(data.count).")
             return
         }
-        guard let characteristic = joydata else {
-            print("no characteristic found.")
-            return
-        }
-        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        self.joyDataToSend.replaceSubrange(0...6, with: data)
     }
 
     open func writeStdin(text: String) {

@@ -517,6 +517,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
                 return
             }
             self.joyTimer = Timer.scheduledTimer(withTimeInterval: self.joyInterval, repeats: true, block: { timer in
+                guard self.peripheral.state == .connected else {
+                    return
+                }
                 guard let characteristic = self.joydata else {
                     return
                 }
@@ -532,7 +535,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         setNotifyAll(false)
         notifyCallback = nil
         self.joyTimer?.invalidate()
-        self.central.disconnect(peripheral)
+        if self.peripheral.state == .connected {
+            self.central.disconnect(peripheral)
+        }
     }
 
     open func discoverAll(_ callback: (() -> Void)? = nil) {
@@ -668,6 +673,10 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         if onDisconnect != nil {
             onDisconnect!()
         }
+        guard let target = peripherals[peripheral.identifier] else {
+            return
+        }
+        target.disconnect()
     }
 
     //

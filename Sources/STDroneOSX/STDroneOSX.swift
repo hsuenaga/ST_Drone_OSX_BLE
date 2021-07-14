@@ -291,6 +291,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     public var stdin: CBCharacteristic?
     public var discoverCallback: (() -> Void)?
     public var notifyCallback: ((W2STTelemetry) -> Void)?
+    public var disconnectCallback: (() -> Void)?
     public var joyDataToSend: Data = Data(count: 7)
     public var joyTimer: Timer?
     public var joyInterval: Double = 0.1
@@ -538,6 +539,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         if self.peripheral.state == .connected {
             self.central.disconnect(peripheral)
         }
+        if disconnectCallback != nil {
+            disconnectCallback!()
+        }
     }
 
     open func discoverAll(_ callback: (() -> Void)? = nil) {
@@ -550,6 +554,10 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     open func onUpdate(_ callback: @escaping ((W2STTelemetry) -> Void)) {
         notifyCallback = callback
         setNotifyAll(true)
+    }
+
+    open func onDisconnect(_ callback: @escaping (() -> Void)) {
+        disconnectCallback = callback
     }
 
     open func writeJoydata(data: Data) {

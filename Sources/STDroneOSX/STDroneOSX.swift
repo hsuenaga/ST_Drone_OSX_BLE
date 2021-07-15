@@ -492,6 +492,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     }
 
     private func setNotifyAll(_ enable: Bool) {
+        guard peripheral.state == .connected else {
+            return
+        }
         for service in services {
             guard let characteristics = service.characteristics else {
                 continue
@@ -510,11 +513,8 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
         self.central.stop()
         self.joyDataToSend = Data(count: 7)
         self.central.connect(peripheral) { error in
-            if callback != nil {
-                callback!(error)
-            }
             guard error == nil else {
-                print("connection error")
+                callback?(error)
                 return
             }
             self.joyTimer = Timer.scheduledTimer(withTimeInterval: self.joyInterval, repeats: true, block: { timer in
@@ -529,18 +529,16 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
                     print("Sent joyData: \(self.joyDataToSend)")
                 }
             })
+            callback?(nil)
         }
     }
 
     open func disconnectComplete() {
-        if disconnectCallback != nil {
-            disconnectCallback!()
-        }
+        disconnectCallback?()
     }
 
     open func disconnect() {
         setNotifyAll(false)
-        notifyCallback = nil
         self.joyTimer?.invalidate()
         if self.peripheral.state == .connected {
             self.central.disconnect(peripheral)
@@ -572,6 +570,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     }
 
     open func writeStdin(text: String) {
+        guard peripheral.state == .connected else {
+            return
+        }
         if text.count == 0 {
             print("writeStdin: invalid data size \(text.count).")
             return
@@ -704,6 +705,9 @@ open class STDroneCentralManager: NSObject, CBCentralManagerDelegate {
         self.onFound = callback
         if manager.state == .poweredOn {
             self.triggerScan()
+        }
+        if peripherals.count > 0 {
+            onFound?(peripherals.map{$1})
         }
     }
 

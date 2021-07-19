@@ -120,12 +120,12 @@ public struct W2STTelemetry {
     }
     public var arming: W2STArming = W2STArming()
 
-    public var stdout: String = ""
-    public var stderr: String = ""
+    public var stdout: [String] = []
+    public var stderr: [String] = []
 
     public init() {
         self.environment = W2STEnvironment()
-        self.AHRS = W2STAHRS()
+	self.AHRS = W2STAHRS()
         self.arming = W2STArming()
     }
 }
@@ -483,10 +483,14 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
             telemetry.arming.tick = value.readUint16LE(from: 0)
             telemetry.arming.enabled = (value[2] != 0)
         case .STDInOut:
-            telemetry.stdout += String(data: value, encoding: .ascii) ?? ""
+		telemetry.stdout.append(contentsOf: (String(data: value, encoding: .ascii) ?? "").components(separatedBy: .newlines).filter {
+			$0.count > 0
+		})
         case .STDErr:
-            telemetry.stderr += String(data: value, encoding: .ascii) ?? ""
-        default:
+		telemetry.stderr.append(contentsOf: (String(data: value, encoding: .ascii) ?? "").components(separatedBy: .newlines).filter {
+			$0.count > 0
+		})
+	default:
             break
         }
     }

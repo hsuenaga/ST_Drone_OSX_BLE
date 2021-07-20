@@ -28,8 +28,8 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
     public var inProgress: Int = 0
     // state of console handling
     public var stdin: CBCharacteristic?
-    public var stdoutNotTerm: Bool = false
-    public var stderrNotTerm: Bool = false
+    public var stdoutNotTerm: String? = nil
+    public var stderrNotTerm: String? = nil
     // callback holders
     public var discoverCallback: (() -> Void)?
     public var notifyCallback: ((W2STTelemetry) -> Void)?
@@ -175,34 +175,26 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 	}
     }
 
-    private func parseConsole(_ rawString: String?, addTo:inout [String], reminder:inout Bool) {
-	guard rawString != nil else {
+    private func parseConsole(_ rawString: String?, addTo:inout [String], reminder:inout String?) {
+	guard var inputString = rawString else {
 		return
 	}
-	var token = rawString!.components(separatedBy: .newlines).filter {
+	if reminder != nil {
+		inputString = reminder! + inputString
+		reminder = nil
+	}
+	var token = inputString.components(separatedBy: .newlines).filter {
 		$0.count > 0
 	}
-	guard token.count > 0 else {
-		return
-	}
-	if reminder, addTo.last != nil {
-		let line = addTo.last! + token.first!
-		addTo.removeLast()
-		token.removeFirst()
-		addTo.append(contentsOf: line.components(separatedBy: .newlines).filter {
-			$0.count > 0
-		})
+	if let finalLine = token.last {
+		if finalLine.last != "\n", finalLine.last != "\r\n" {
+			reminder = token.removeLast()
+		}
 	}
 	guard token.count > 0 else {
 		return
 	}
 	addTo.append(contentsOf: token)
-	if rawString!.last == "\n" || rawString!.last == "\r\n" {
-		reminder = false
-	}
-	else {
-		reminder = true
-	}
     }
 
     private func parseCharValue(_ characteristic: CBCharacteristic) {

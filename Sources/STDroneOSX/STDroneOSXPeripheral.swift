@@ -179,11 +179,9 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 	guard rawString != nil else {
 		return
 	}
-	print(rawString!)
 	var token = rawString!.components(separatedBy: .newlines).filter {
 		$0.count > 0
 	}
-	print(token)
 	guard token.count > 0 else {
 		return
 	}
@@ -205,7 +203,6 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 	else {
 		reminder = true
 	}
-	print("\(rawString!.last!.asciiValue!) => \(reminder)")
     }
 
     private func parseCharValue(_ characteristic: CBCharacteristic) {

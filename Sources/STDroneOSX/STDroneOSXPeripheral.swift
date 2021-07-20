@@ -179,6 +179,7 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 	guard var inputString = rawString else {
 		return
 	}
+	print(inputString)
 	if reminder != nil {
 		inputString = reminder! + inputString
 		reminder = nil
@@ -186,15 +187,19 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 	var token = inputString.components(separatedBy: .newlines).filter {
 		$0.count > 0
 	}
-	if let finalLine = token.last {
-		if finalLine.last != "\n", finalLine.last != "\r\n" {
+	if inputString.last != "\n", inputString.last != "\r\n" {
+		if (token.count > 0) {
 			reminder = token.removeLast()
+		}
+		else {
+			reminder = inputString
 		}
 	}
 	guard token.count > 0 else {
 		return
 	}
 	addTo.append(contentsOf: token)
+	print(token)
     }
 
     private func parseCharValue(_ characteristic: CBCharacteristic) {

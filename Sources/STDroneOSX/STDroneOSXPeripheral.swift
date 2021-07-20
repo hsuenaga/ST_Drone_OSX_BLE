@@ -179,7 +179,6 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 	guard var inputString = rawString else {
 		return
 	}
-	print(inputString)
 	if reminder != nil {
 		inputString = reminder! + inputString
 		reminder = nil
@@ -199,7 +198,6 @@ open class STDronePeripheral: NSObject, CBPeripheralDelegate {
 		return
 	}
 	addTo.append(contentsOf: token)
-	print(token)
     }
 
     private func parseCharValue(_ characteristic: CBCharacteristic) {
